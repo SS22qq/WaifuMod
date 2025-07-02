@@ -1,0 +1,92 @@
+/*    */ package net.mcreator.waifuofgod;
+/*    */ 
+/*    */ import java.util.AbstractMap;
+/*    */ import java.util.ArrayList;
+/*    */ import java.util.Collection;
+/*    */ import java.util.List;
+/*    */ import java.util.concurrent.ConcurrentLinkedQueue;
+/*    */ import java.util.function.BiConsumer;
+/*    */ import java.util.function.Function;
+/*    */ import java.util.function.Supplier;
+/*    */ import net.mcreator.waifuofgod.init.WaifuOfGodModBlockEntities;
+/*    */ import net.mcreator.waifuofgod.init.WaifuOfGodModBlocks;
+/*    */ import net.mcreator.waifuofgod.init.WaifuOfGodModEntities;
+/*    */ import net.mcreator.waifuofgod.init.WaifuOfGodModItems;
+/*    */ import net.mcreator.waifuofgod.init.WaifuOfGodModMenus;
+/*    */ import net.mcreator.waifuofgod.init.WaifuOfGodModMobEffects;
+/*    */ import net.mcreator.waifuofgod.init.WaifuOfGodModParticleTypes;
+/*    */ import net.mcreator.waifuofgod.init.WaifuOfGodModSounds;
+/*    */ import net.mcreator.waifuofgod.init.WaifuOfGodModTabs;
+/*    */ import net.minecraft.network.FriendlyByteBuf;
+/*    */ import net.minecraft.resources.ResourceLocation;
+/*    */ import net.minecraftforge.common.MinecraftForge;
+/*    */ import net.minecraftforge.event.TickEvent;
+/*    */ import net.minecraftforge.eventbus.api.IEventBus;
+/*    */ import net.minecraftforge.eventbus.api.SubscribeEvent;
+/*    */ import net.minecraftforge.fml.common.Mod;
+/*    */ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+/*    */ import net.minecraftforge.fml.util.thread.SidedThreadGroups;
+/*    */ import net.minecraftforge.network.NetworkEvent;
+/*    */ import net.minecraftforge.network.NetworkRegistry;
+/*    */ import net.minecraftforge.network.simple.SimpleChannel;
+/*    */ import org.apache.logging.log4j.LogManager;
+/*    */ import org.apache.logging.log4j.Logger;
+/*    */ 
+/*    */ @Mod("waifu_of_god")
+/*    */ public class WaifuOfGodMod {
+/* 41 */   public static final Logger LOGGER = LogManager.getLogger(WaifuOfGodMod.class);
+/*    */   
+/*    */   public static final String MODID = "waifu_of_god";
+/*    */   
+/*    */   private static final String PROTOCOL_VERSION = "1";
+/*    */   
+/*    */   public WaifuOfGodMod() {
+/* 47 */     MinecraftForge.EVENT_BUS.register(this);
+/* 48 */     IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+/* 49 */     WaifuOfGodModSounds.REGISTRY.register(bus);
+/* 50 */     WaifuOfGodModBlocks.REGISTRY.register(bus);
+/* 51 */     WaifuOfGodModBlockEntities.REGISTRY.register(bus);
+/* 52 */     WaifuOfGodModItems.REGISTRY.register(bus);
+/* 53 */     WaifuOfGodModEntities.REGISTRY.register(bus);
+/* 55 */     WaifuOfGodModTabs.REGISTRY.register(bus);
+/* 57 */     WaifuOfGodModMobEffects.REGISTRY.register(bus);
+/* 59 */     WaifuOfGodModParticleTypes.REGISTRY.register(bus);
+/* 61 */     WaifuOfGodModMenus.REGISTRY.register(bus);
+/*    */   }
+/*    */   
+/* 69 */   public static final SimpleChannel PACKET_HANDLER = NetworkRegistry.newSimpleChannel(new ResourceLocation("waifu_of_god", "waifu_of_god"), () -> "1", "1"::equals, "1"::equals);
+/*    */   
+/* 70 */   private static int messageID = 0;
+/*    */   
+/*    */   public static <T> void addNetworkMessage(Class<T> messageType, BiConsumer<T, FriendlyByteBuf> encoder, Function<FriendlyByteBuf, T> decoder, BiConsumer<T, Supplier<NetworkEvent.Context>> messageConsumer) {
+/* 73 */     PACKET_HANDLER.registerMessage(messageID, messageType, encoder, decoder, messageConsumer);
+/* 74 */     messageID++;
+/*    */   }
+/*    */   
+/* 77 */   private static final Collection<AbstractMap.SimpleEntry<Runnable, Integer>> workQueue = new ConcurrentLinkedQueue<>();
+/*    */   
+/*    */   public static void queueServerWork(int tick, Runnable action) {
+/* 80 */     if (Thread.currentThread().getThreadGroup() == SidedThreadGroups.SERVER)
+/* 81 */       workQueue.add(new AbstractMap.SimpleEntry<>(action, Integer.valueOf(tick))); 
+/*    */   }
+/*    */   
+/*    */   @SubscribeEvent
+/*    */   public void tick(TickEvent.ServerTickEvent event) {
+/* 86 */     if (event.phase == TickEvent.Phase.END) {
+/* 87 */       List<AbstractMap.SimpleEntry<Runnable, Integer>> actions = new ArrayList<>();
+/* 88 */       workQueue.forEach(work -> {
+/*    */             work.setValue(Integer.valueOf(((Integer)work.getValue()).intValue() - 1));
+/*    */             if (((Integer)work.getValue()).intValue() == 0)
+/*    */               actions.add(work); 
+/*    */           });
+/* 93 */       actions.forEach(e -> ((Runnable)e.getKey()).run());
+/* 94 */       workQueue.removeAll(actions);
+/*    */     } 
+/*    */   }
+/*    */ }
+
+
+/* Location:              C:\Users\Administrator\Desktop\waifu_of_god-1.0.0-forge-1.20.1.jar!\net\mcreator\waifuofgod\WaifuOfGodMod.class
+ * Java compiler version: 17 (61.0)
+ * JD-Core Version:       1.1.3
+ */
